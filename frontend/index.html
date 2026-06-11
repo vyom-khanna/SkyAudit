@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="SchoolTruth — Satellite-powered government school accountability platform for India. Real-time anomaly detection using Sentinel-2 imagery and AI." />
+    <meta property="og:title" content="SchoolTruth — School Accountability Platform" />
+    <meta property="og:description" content="Detecting ghost schools, enrollment fraud, and meal fraud across India using satellite imagery and AI." />
+    <meta name="theme-color" content="#1e3a5f" />
+    <title>SchoolTruth — School Accountability</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #f9fafb; }
+      #root { min-height: 100vh; }
+      .leaflet-tooltip-custom {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-family: 'Inter', sans-serif;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      }
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

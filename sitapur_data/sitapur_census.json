@@ -1,0 +1,39 @@
+{
+  "district_code": "09140",
+  "district_name": "Sitapur",
+  "state_name": "Uttar Pradesh",
+  "state_code": "09",
+  "total_population": 4483992,
+  "age_group_0_29": 2862383,
+  "estimated_school_age_6_14": 915962,
+  "enrollment_ceiling_govt_schools": 686971,
+  "education_levels": {
+    "below_primary": 714304,
+    "primary": 656401,
+    "middle": 482220,
+    "secondary": 221898,
+    "higher": 136383,
+    "graduate": 127750
+  },
+  "literacy": {
+    "literate": 2283733,
+    "illiterate": 2141696,
+    "literacy_rate": 50.93
+  },
+  "households": {
+    "rural": 827583,
+    "urban": 111319,
+    "total": 938902
+  },
+  "poverty_index": 0.001,
+  "cagr_projection_2024": {
+    "years_from_2011": 13,
+    "cagr_rate": 0.012,
+    "projected_school_age_population": 1069606
+  },
+  "per_child_spend_inr": 4500,
+  "meal_cost_primary_inr": 5.45,
+  "meal_cost_upper_primary_inr": 8.17,
+  "school_days_per_year": 220,
+  "avg_teacher_salary_monthly_inr": 35000
+}

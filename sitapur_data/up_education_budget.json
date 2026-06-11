@@ -1,0 +1,107 @@
+{
+  "up_education_budget": {
+    "2011_12": {
+      "total_elementary_crore": 18126,
+      "ssa_crore": 7200,
+      "teacher_salaries_crore": 9800,
+      "infrastructure_crore": 1126,
+      "per_district_average_crore": 241,
+      "sitapur_estimated_crore": 235,
+      "per_child_spend_inr": 1850,
+      "source": "Accountability Initiative / Ministry of Education published data"
+    },
+    "2023_24": {
+      "total_crore": 68000,
+      "samagra_shiksha_crore": 18500,
+      "teacher_salaries_crore": 38000,
+      "infrastructure_crore": 11500,
+      "per_district_average_crore": 906,
+      "sitapur_estimated_crore": 890,
+      "per_child_spend_inr": 4500,
+      "source": "UP state budget documents 2023-24"
+    },
+    "growth_2011_to_2024": {
+      "total_budget_multiplier": 3.75,
+      "per_child_spend_multiplier": 2.43,
+      "note": "Budget grew 3.75x but per child spend only 2.43x due to population growth"
+    }
+  },
+  "scheme_rates": {
+    "2011_12": {
+      "meal_cost_primary_inr": 3.59,
+      "meal_cost_upper_primary_inr": 5.38,
+      "school_days_per_year": 200,
+      "avg_teacher_salary_monthly_inr": 18000,
+      "source": "MDM scheme notification 2011"
+    },
+    "2023_24": {
+      "meal_cost_primary_inr": 5.45,
+      "meal_cost_upper_primary_inr": 8.17,
+      "school_days_per_year": 220,
+      "avg_teacher_salary_monthly_inr": 35000,
+      "ict_lab_grant_inr": 640000,
+      "smart_classroom_grant_inr": 240000,
+      "smart_classroom_recurring_inr": 38000,
+      "source": "PM Poshan 2023 official rates / Samagra Shiksha PIB 2021"
+    },
+    "2024_25_dec_onwards": {
+      "meal_cost_primary_inr": 6.19,
+      "meal_cost_upper_primary_inr": 9.29,
+      "total_per_meal_primary_inr": 11.54,
+      "total_per_meal_upper_primary_inr": 16.74,
+      "school_days_per_year": 220,
+      "avg_teacher_salary_monthly_inr": 35000,
+      "ict_lab_grant_inr": 640000,
+      "smart_classroom_grant_inr": 240000,
+      "smart_classroom_recurring_inr": 38000,
+      "effective_from": "2024-12-01",
+      "source": "Ministry of Education PM Poshan notification December 2024"
+    },
+    "2025_26_may_onwards": {
+      "meal_cost_primary_inr": 6.78,
+      "meal_cost_upper_primary_inr": 10.17,
+      "total_per_meal_primary_inr": 11.54,
+      "total_per_meal_upper_primary_inr": 16.74,
+      "school_days_per_year": 220,
+      "avg_teacher_salary_monthly_inr": 35000,
+      "ict_lab_grant_inr": 640000,
+      "smart_classroom_grant_inr": 240000,
+      "smart_classroom_recurring_inr": 38000,
+      "effective_from": "2025-05-01",
+      "source": "Ministry of Education PM Poshan notification April 2025"
+    },
+    "current": {
+      "meal_cost_primary_inr": 6.78,
+      "meal_cost_upper_primary_inr": 10.17,
+      "total_per_meal_primary_inr": 11.54,
+      "total_per_meal_upper_primary_inr": 16.74,
+      "school_days_per_year": 220,
+      "avg_teacher_salary_monthly_inr": 35000,
+      "cook_helper_honorarium_monthly_inr": 1000,
+      "foodgrain_primary_grams_per_day": 100,
+      "foodgrain_upper_primary_grams_per_day": 150,
+      "ict_lab_grant_inr": 640000,
+      "smart_classroom_grant_inr": 240000,
+      "smart_classroom_recurring_inr": 38000,
+      "effective_from": "2025-05-01",
+      "note": "Material cost only — foodgrains supplied free by FCI separately",
+      "source": "Ministry of Education PM Poshan notification April 2025"
+    }
+  },
+  "fraud_detection_thresholds": {
+    "enrollment_inflation_ratio": 1.2,
+    "meal_excess_ratio": 1.1,
+    "outcome_anomaly_std_deviations": 2,
+    "teacher_risk_score_threshold": 0.7,
+    "building_confidence_threshold": 0.7,
+    "ndbi_change_threshold": 0.05
+  },
+  "sitapur_district": {
+    "district_code": "09140",
+    "estimated_budget_2023_24_crore": 890,
+    "total_govt_schools_approx": 3200,
+    "verified_enrollment_ceiling": 686971,
+    "per_child_spend_inr": 4500,
+    "funds_at_risk_if_10pct_fraud_crore": 89
+  }
+}

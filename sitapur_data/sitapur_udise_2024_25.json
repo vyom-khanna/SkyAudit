@@ -1,0 +1,152 @@
+{
+  "meta": {
+    "district": "Sitapur",
+    "state": "Uttar Pradesh",
+    "district_code": "09140",
+    "data_source": "UDISE+ 2024-25",
+    "report_generated": "08 Jun 2026"
+  },
+
+  "schools": {
+    "total_schools": 5779,
+    "government_schools": 3603,
+    "state_government": 3600,
+    "kendriya_vidyalaya": 1,
+    "navodaya_vidyalaya": 2,
+    "government_aided": 156,
+    "private_unaided_recognized": 1466,
+    "other_schools": 554,
+    "govt_schools_with_primary": 2982,
+    "govt_aided_with_primary": 19,
+    "schools_with_balvatika": 78,
+    "by_category": {
+      "primary_1_5": 3422,
+      "upper_primary_1_8": 916,
+      "upper_primary_6_8": 824,
+      "secondary_1_10": 131,
+      "secondary_6_10": 66,
+      "secondary_9_10": 46,
+      "higher_secondary_1_12": 117,
+      "higher_secondary_6_12": 203,
+      "higher_secondary_9_12": 54,
+      "higher_secondary_11_12": 0
+    }
+  },
+
+  "enrollment": {
+    "total": 929334,
+    "foundational": 154886,
+    "preparatory": 327002,
+    "middle": 278284,
+    "secondary": 169162,
+    "by_category": {
+      "sc_students": 324792,
+      "st_students": 2922,
+      "obc_students": 456812,
+      "minority_students": 176418,
+      "cwsn_students": 7409
+    },
+    "by_management": {
+      "kendriya_vidyalaya": 1835,
+      "navodaya_vidyalaya": 872,
+      "state_government": 504137,
+      "government_total": 506844,
+      "government_aided": 67104,
+      "private_unaided": 301116,
+      "other": 54270
+    },
+    "by_school_type": {
+      "primary_1_5": 333441,
+      "upper_primary_1_8": 210037,
+      "upper_primary_6_8": 108503,
+      "secondary_1_10": 27679,
+      "secondary_6_10": 15883,
+      "secondary_9_10": 4589,
+      "higher_secondary_1_12": 73784,
+      "higher_secondary_6_12": 127586,
+      "higher_secondary_9_12": 21189
+    }
+  },
+
+  "teachers": {
+    "total": 32043,
+    "kendriya_vidyalaya": 58,
+    "navodaya_vidyalaya": 48,
+    "state_government": 18044,
+    "government_total": 18150,
+    "government_aided": 1155,
+    "private_unaided": 9861,
+    "other": 2877
+  },
+
+  "pupil_teacher_ratio": {
+    "foundational": 7,
+    "preparatory": 15,
+    "middle": 33,
+    "secondary": 41
+  },
+
+  "dropout_rates": {
+    "preparatory": 0,
+    "middle": 11,
+    "secondary": 7.3
+  },
+
+  "transition_rates": {
+    "foundational_to_preparatory": 98.5,
+    "preparatory_to_middle": 95.7,
+    "middle_to_secondary": 58.6
+  },
+
+  "infrastructure": {
+    "pct_electricity": 80.57,
+    "pct_functional_electricity": 78.39,
+    "pct_drinking_water": 99.5,
+    "pct_functional_drinking_water": 99.5,
+    "pct_toilet": 98.55,
+    "pct_functional_toilet": 93.29,
+    "pct_boys_toilet": 97.89,
+    "pct_functional_boys_toilet": 92.45,
+    "pct_girls_toilet": 96.57,
+    "pct_functional_girls_toilet": 91.44,
+    "pct_handwash": 95.09,
+    "pct_playground": 78.02,
+    "pct_computer": 61.38,
+    "pct_functional_computer": 49.77,
+    "pct_internet": 32.74,
+    "pct_cwsn_toilet": 35.08,
+    "pct_functional_cwsn_toilet": 31.86,
+    "pct_ramp_handrail": 61.24,
+    "pct_kitchen_garden": 27.31,
+    "pct_rainwater_harvesting": 13.65,
+    "pct_library": 84.56,
+    "pct_functional_smart_classroom": 7.58
+  },
+
+  "performance": {
+    "pgi_score": 233.45,
+    "pgi_grade": "PRACHESTA-3"
+  },
+
+  "migration": {
+    "within_district": 127553,
+    "to_another_district_same_state": 4515,
+    "to_another_state": 930
+  },
+
+  "derived_metrics": {
+    "govt_school_enrollment": 506844,
+    "private_school_enrollment": 301116,
+    "govt_share_pct": 54.54,
+    "avg_enrollment_per_govt_school": 141,
+    "avg_teachers_per_govt_school": 5,
+    "govt_ptr": 27.9,
+    "enrollment_ceiling_for_fraud_detection": 506844,
+    "note_enrollment_ceiling": "Any school reporting enrollment far above district average of 141 per school is suspicious",
+    "funds_at_risk_mdm_annual_crore": {
+      "calculation": "506844 students x 6.78 Rs/meal x 220 days / 10000000",
+      "value": 75.5,
+      "note": "Total annual MDM cost for govt schools at current rates"
+    }
+  }
+}
