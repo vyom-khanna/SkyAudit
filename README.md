@@ -14,13 +14,13 @@ skyaudit/
 │   │   ├── main.py           FastAPI application entry point
 │   │   ├── models.py         SQLAlchemy ORM models (8 tables)
 │   │   ├── schemas.py        Pydantic request/response schemas
+│   │   ├── seed.py           🌱 SEED SCRIPT (generates full demo dataset)
 │   │   ├── routers/          API endpoint routers
 │   │   │   ├── schools.py    School profile + verification endpoints
 │   │   │   ├── districts.py  District profile + rankings
 │   │   │   ├── anomalies.py  Anomaly CRUD + officer updates
 │   │   │   ├── pulse.py      Live feed + SSE stream
 │   │   │   ├── reports.py    PDF reports + national summary
-│   │   │   ├── whatsapp.py   Twilio WhatsApp webhook
 │   │   │   └── auth.py       JWT officer authentication
 │   │   ├── services/         Business logic
 │   │   │   ├── ghost_detector.py        Module 1
@@ -31,30 +31,15 @@ skyaudit/
 │   │   │   ├── teacher_presence.py      Module 6
 │   │   │   ├── budget_efficiency.py     Module 7
 │   │   │   ├── anomaly_engine.py        Orchestrates all 7 modules
-│   │   │   ├── notice_generator.py      PDF notices + email + escalation
 │   │   │   ├── satellite.py             Google Earth Engine client
-│   │   │   ├── scheduler.py             APScheduler periodic jobs
-│   │   │   └── whatsapp_bot.py          WhatsApp command handler
+│   │   │   └── scheduler.py             APScheduler periodic jobs
 │   │   └── ml/               Machine learning models
 │   │       ├── building_detector.py  Open Buildings + NDBI fallback
 │   │       ├── change_detection.py   NDBI construction change detection
 │   │       ├── enrollment_model.py   Census ceiling computation
 │   │       ├── outcome_model.py      XGBoost board result predictor
 │   │       └── teacher_risk_model.py Composite teacher risk scorer
-│   └── data/
-│       ├── ingestion/        Data loaders for all sources
-│       │   ├── udise_loader.py        UDISE+ Excel/CSV
-│       │   ├── mdm_scraper.py         PM Poshan portal
-│       │   ├── census_loader.py       Census 2011 C-13 + CAGR
-│       │   ├── samagra_loader.py      Samagra Shiksha grants
-│       │   ├── aser_loader.py         ASER learning outcomes
-│       │   ├── board_results_scraper.py UP Board results
-│       │   ├── cag_parser.py          CAG audit PDF parser
-│       │   └── budget_loader.py       Open Budgets India
-│       └── processing/
-│           ├── udise_cleaner.py       Data cleaning pipeline
-│           ├── satellite_processor.py Batch NDBI + building detection
-│           └── anomaly_scorer.py      🌱 SEED SCRIPT (run this first!)
+│   └── requirements.txt      Python dependencies
 │
 ├── frontend/         React 18 + Tailwind CSS + Leaflet
 │   └── src/
@@ -86,15 +71,13 @@ skyaudit/
 
 ---
 
-## Automated Escalation
+## Escalation Tracking
 
-```
-Day 0:  Anomaly detected → notice PDF generated
-Day 0:  Email to District Education Officer
-Day 30: No response → escalate to State Education Secretary
-Day 60: Still no response → RTI auto-filed
-Day 90: Still no response → public Hall of Shame listing
-```
+The platform tracks the notice and response cycle for verified anomalies, simulating/visualizing the following timeline in the officer's dashboard:
+* **Day 0:** Anomaly detected & notice issued to the District Education Officer (DEO).
+* **Day 30:** DEO response deadline; flags escalation to the State Education Secretary.
+* **Day 60:** Overdue status triggering Right to Information (RTI) auto-filing preview.
+* **Day 90:** Listing visibility escalation on the public dashboard.
 
 ---
 
@@ -143,7 +126,7 @@ pip install -r requirements.txt
 # Set up PostgreSQL with PostGIS, then:
 export DATABASE_URL=postgresql://user:pass@localhost:5432/skyaudit
 python -c "from app.database import init_db; init_db()"
-python data/processing/anomaly_scorer.py  # seed data
+python app/seed.py  # seed data
 
 uvicorn app.main:app --reload --port 8000
 ```
@@ -173,7 +156,7 @@ curl "http://localhost:8000/districts/rankings?limit=50&sort_by=accountability_s
 curl http://localhost:8000/schools/09140100001
 
 # All ghost schools in UP
-curl "http://localhost:8000/anomalies/?state=09&type=ghost_school&status=new"
+curl "http://localhost:8000/anomalies/?state=09&anomaly_type=ghost_school&anomaly_status=new"
 
 # Live pulse feed (SSE)
 curl -N http://localhost:8000/pulse/stream
@@ -201,43 +184,12 @@ curl http://localhost:8000/reports/district/09071/pdf > report.pdf
 
 ---
 
-## WhatsApp Bot
-
-Send any 11-digit UDISE code to the configured WhatsApp number:
-
-```
-You: 09140100001
-
-SkyAudit: 🏫 Govt Primary School Sitapur 1
-             📍 Sitapur, Sitapur, Uttar Pradesh
-
-             ✅ Building: Verified (94% confidence)
-             🔴 Enrollment: ANOMALY
-                Reports 240 students
-                Verified capacity: 89 students
-             🔴 Mid-Day Meals: ANOMALY
-                Claims 240 meals/day
-                Verified students: 89
-             ✅ Construction: No grants pending
-             ⚠️ Pass Rate: Under review
-
-             ₹3.2L in flagged funds
-             Last checked: 2 days ago
-
-             Full report: skyaudit.in/09140100001
-```
-
----
-
 ## Scheduler Jobs
 
 | Job | Schedule | Action |
 |-----|----------|--------|
 | Satellite update | Every 5 days | Re-verify stale schools with new imagery |
-| MDM scrape | 1st of month | Re-scrape PM Poshan portal |
-| Weekly reports | Monday 6am | Email state reports to journalists/officials |
-| Escalation check | Daily 7:30am | Auto-escalate overdue notices |
-| Board results | April 15 | Scrape UP Board results, run outcome module |
+| Weekly reports | Monday 6am | Email state reports to pre-configured officials/journalists |
 
 ---
 
