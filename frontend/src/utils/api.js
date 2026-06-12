@@ -1,7 +1,7 @@
 // frontend/src/utils/api.js
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -11,7 +11,7 @@ const api = axios.create({
 
 // Attach JWT token if present
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('schooltruth_token');
+  const token = localStorage.getItem('skyaudit_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -20,7 +20,7 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('schooltruth_token');
+      localStorage.removeItem('skyaudit_token');
       window.location.href = '/login';
     }
     return Promise.reject(err);
@@ -48,7 +48,7 @@ export const anomaliesApi = {
 };
 
 export const pulseApi = {
-  getEvents: (params) => api.get('/pulse', { params }),
+  getEvents: (params) => api.get('/pulse/', { params }),
   streamUrl: (params) => {
     const qs = new URLSearchParams(params).toString();
     return `${API_BASE}/pulse/stream${qs ? '?' + qs : ''}`;
@@ -57,7 +57,6 @@ export const pulseApi = {
 
 export const reportsApi = {
   getNationalSummary: () => api.get('/reports/national/summary'),
-  getDistrictPdf: (code) => api.get(`/reports/district/${code}/pdf`, { responseType: 'blob' }),
   getWeekly: (stateCode) => api.get(`/reports/weekly/${stateCode}`),
 };
 

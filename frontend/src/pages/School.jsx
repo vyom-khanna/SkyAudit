@@ -7,23 +7,14 @@ import { SatelliteViewer } from '../components/Map/SatelliteViewer';
 import { ShareButton } from '../components/shared/ShareButton';
 import { formatCurrency, getSeverityBg, timeAgo } from '../utils/scoreColors';
 import { AccountabilityScore } from '../components/District/AccountabilityScore';
-import { AlertTriangle, MapPin, Flag, Download } from 'lucide-react';
-import { reportsApi } from '../utils/api';
+import { AlertTriangle, MapPin, Flag } from 'lucide-react';
 
 export default function School() {
   const { udiseCode } = useParams();
   const { data, loading, error } = useSchool(udiseCode);
   const { data: satData } = useSchoolSatellite(udiseCode);
 
-  const handleDownloadReport = async () => {
-    try {
-      const res = await reportsApi.getDistrictPdf(data?.school?.district_code);
-      const blob = new Blob([res.data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `SchoolTruth_${udiseCode}.pdf`; a.click();
-    } catch (e) { alert('PDF generation failed'); }
-  };
+
 
   if (loading) return (
     <div className="pt-14 h-screen flex items-center justify-center">
@@ -82,11 +73,8 @@ export default function School() {
           )}
 
           <div className="flex gap-2 mt-4">
-            <ShareButton title={`${school.name} — SchoolTruth`} className="flex-1 justify-center" />
-            <button onClick={handleDownloadReport}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-              <Download size={14} /> PDF Report
-            </button>
+            <ShareButton title={`${school.name} — SkyAudit`} className="flex-1 justify-center" />
+
             <button
               className="flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-700 rounded-lg text-sm hover:bg-orange-50">
               <Flag size={14} /> Flag Issue

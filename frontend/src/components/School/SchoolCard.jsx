@@ -120,7 +120,7 @@ export default function SchoolCard({ udiseCode, onClose }) {
       <div className="px-4 pb-4 flex gap-2">
         <ShareButton
           url={`${window.location.origin}/school/${school.udise_code}`}
-          title={`${school.name} — SchoolTruth`}
+          title={`${school.name} — SkyAudit`}
           className="flex-1 justify-center"
         />
         <button

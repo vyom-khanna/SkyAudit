@@ -6,7 +6,7 @@ from sqlalchemy.pool import QueuePool
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://schooltruth:schooltruth@localhost:5432/schooltruth"
+    "postgresql://skyaudit:skyaudit@localhost:5432/skyaudit"
 )
 
 engine = create_engine(

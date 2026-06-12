@@ -15,7 +15,7 @@ from app.database import get_db
 from app.models import Officer
 from app.schemas import Token, OfficerOut
 
-JWT_SECRET = os.getenv("JWT_SECRET_KEY", "schooltruth-dev-secret-change-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET_KEY", "skyaudit-dev-secret-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours
 

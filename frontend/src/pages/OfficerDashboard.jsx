@@ -6,7 +6,7 @@ import { formatCurrency, getSeverityBg, timeAgo } from '../utils/scoreColors';
 import { AlertTriangle, CheckCircle, Clock, TrendingUp, X } from 'lucide-react';
 
 function LoginForm({ onLogin }) {
-  const [email, setEmail] = useState('demo@schooltruth.in');
+  const [email, setEmail] = useState('demo@skyaudit.in');
   const [password, setPassword] = useState('demo1234');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,11 +17,11 @@ function LoginForm({ onLogin }) {
     setError('');
     try {
       const res = await authApi.login(email, password);
-      localStorage.setItem('schooltruth_token', res.data.access_token);
+      localStorage.setItem('skyaudit_token', res.data.access_token);
       const me = await authApi.getMe();
       onLogin(me.data);
     } catch {
-      setError('Invalid credentials. Try demo@schooltruth.in / demo1234');
+      setError('Invalid credentials. Try demo@skyaudit.in / demo1234');
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,7 @@ function LoginForm({ onLogin }) {
             <AlertTriangle size={22} className="text-white" />
           </div>
           <h2 className="text-xl font-bold text-gray-900">Officer Login</h2>
-          <p className="text-sm text-gray-500 mt-1">SchoolTruth Accountability Portal</p>
+          <p className="text-sm text-gray-500 mt-1">SkyAudit Accountability Portal</p>
         </div>
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -54,7 +54,7 @@ function LoginForm({ onLogin }) {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
-        <p className="text-xs text-gray-400 text-center mt-4">Demo: demo@schooltruth.in / demo1234</p>
+        <p className="text-xs text-gray-400 text-center mt-4">Demo: demo@skyaudit.in / demo1234</p>
       </div>
     </div>
   );
@@ -124,10 +124,10 @@ export default function OfficerDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('schooltruth_token');
+    const token = localStorage.getItem('skyaudit_token');
     if (!token) return;
     authApi.getMe().then(res => setOfficer(res.data)).catch(() => {
-      localStorage.removeItem('schooltruth_token');
+      localStorage.removeItem('skyaudit_token');
     });
   }, []);
 
@@ -176,7 +176,7 @@ export default function OfficerDashboard() {
             </p>
           </div>
           <button
-            onClick={() => { localStorage.removeItem('schooltruth_token'); setOfficer(null); }}
+            onClick={() => { localStorage.removeItem('skyaudit_token'); setOfficer(null); }}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
             Sign out

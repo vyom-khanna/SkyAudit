@@ -33,7 +33,7 @@ export default function Navbar() {
             <Shield size={18} className="text-white" />
           </div>
           <span className="text-white font-bold text-lg tracking-tight hidden sm:block">
-            School<span className="text-blue-400">Truth</span>
+            Sky<span className="text-blue-400">Audit</span>
           </span>
         </Link>
 

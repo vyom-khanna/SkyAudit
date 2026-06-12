@@ -53,7 +53,7 @@ async def pulse_stream(
         retry_interval = 10  # seconds
 
         # Send initial connection event
-        yield f"data: {json.dumps({'type': 'connected', 'message': 'SchoolTruth pulse stream connected'})}\n\n"
+        yield f"data: {json.dumps({'type': 'connected', 'message': 'SkyAudit pulse stream connected'})}\n\n"
 
         while True:
             try:
@@ -88,6 +88,7 @@ async def pulse_stream(
                             "school_name": event.school_name,
                             "district_name": event.district_name,
                             "state_name": event.state_name,
+                            "udise_code": event.udise_code,
                             "satellite_url": event.satellite_url,
                             "created_at": event.created_at.isoformat() if event.created_at else None,
                         }

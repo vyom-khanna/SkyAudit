@@ -71,14 +71,14 @@ export function AnomalyCard({ event, isNew = false }) {
         {/* Actions */}
         <div className="flex gap-2">
           <button
-            onClick={() => navigate(`/school/${event.anomaly_id}`)}
+            onClick={() => navigate(`/school/${event.udise_code}`)}
             className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium"
           >
             <MapPin size={12} /> View on Map
           </button>
           <button
             onClick={async () => {
-              await navigator.clipboard.writeText(`${window.location.origin}/anomaly/${event.anomaly_id}`);
+              await navigator.clipboard.writeText(`${window.location.origin}/school/${event.udise_code}`);
             }}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 ml-auto"
           >

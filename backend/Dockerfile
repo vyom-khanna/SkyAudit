@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System dependencies for PostGIS, shapely, pdfplumber
+# System dependencies for PostGIS, shapely
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdal-dev \
     libgeos-dev \
@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     curl \
-    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

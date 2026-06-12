@@ -81,3 +81,6 @@ sitapur_data/udise-schools-all.csv
 # Google Earth Engine / API keys
 service_account*.json
 *credentials*.json
+backend/gee-private-key.json
+*private-key*.json
+

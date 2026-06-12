@@ -11,7 +11,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.database import init_db
-from app.routers import schools, districts, anomalies, pulse, reports, whatsapp, auth
+from app.routers import schools, districts, anomalies, pulse, reports, auth
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -28,10 +28,10 @@ def seed_demo_officer():
 
     db = SessionLocal()
     try:
-        existing = db.query(Officer).filter(Officer.email == "demo@schooltruth.in").first()
+        existing = db.query(Officer).filter(Officer.email == "demo@skyaudit.in").first()
         if not existing:
             demo = Officer(
-                email="demo@schooltruth.in",
+                email="demo@skyaudit.in",
                 name="Demo Officer",
                 role="national_admin",
                 district_code=None,
@@ -40,7 +40,7 @@ def seed_demo_officer():
             )
             db.add(demo)
             db.commit()
-            logger.info("Demo officer seeded: demo@schooltruth.in / demo1234")
+            logger.info("Demo officer seeded: demo@skyaudit.in / demo1234")
         else:
             logger.info("Demo officer already exists, skipping seed.")
     except Exception as e:
@@ -53,17 +53,17 @@ def seed_demo_officer():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    logger.info("SchoolTruth API starting up...")
+    logger.info("SkyAudit API starting up...")
     init_db()
     seed_demo_officer()
     start_scheduler()
     yield
-    logger.info("SchoolTruth API shutting down...")
+    logger.info("SkyAudit API shutting down...")
     stop_scheduler()
 
 
 app = FastAPI(
-    title="SchoolTruth API",
+    title="SkyAudit API",
     description="Satellite-powered government school accountability platform for India",
     version="1.0.0",
     docs_url="/docs",
@@ -77,7 +77,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS
 allowed_origins = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:3000,https://schooltruth.in,https://www.schooltruth.in"
+    "http://localhost:3000,https://skyaudit.in,https://www.skyaudit.in"
 ).split(",")
 
 app.add_middleware(
@@ -95,13 +95,12 @@ app.include_router(districts.router)
 app.include_router(anomalies.router)
 app.include_router(pulse.router)
 app.include_router(reports.router)
-app.include_router(whatsapp.router)
 
 
 @app.get("/", tags=["health"])
 def root():
     return {
-        "service": "SchoolTruth API",
+        "service": "SkyAudit API",
         "version": "1.0.0",
         "status": "operational",
         "docs": "/docs",

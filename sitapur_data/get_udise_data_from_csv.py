@@ -21,7 +21,7 @@ def geocode_nominatim(query):
     
     req = urllib.request.Request(
         url, 
-        headers={'User-Agent': 'SchoolTruth-Geocoder-Agent/1.0 (contact: support@schooltruth.in)'}
+        headers={'User-Agent': 'SkyAudit-Geocoder-Agent/1.0 (contact: support@skyaudit.in)'}
     )
     
     try:

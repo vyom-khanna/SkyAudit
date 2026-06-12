@@ -42,7 +42,7 @@ export default function Rankings() {
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'SchoolTruth_Rankings.csv'; a.click();
+    a.href = url; a.download = 'SkyAudit_Rankings.csv'; a.click();
   };
 
   const SortIcon = ({ col }) => {

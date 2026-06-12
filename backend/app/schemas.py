@@ -200,6 +200,7 @@ class PulseEventOut(BaseModel):
     school_name: str
     district_name: str
     state_name: str
+    udise_code: Optional[str] = None
     satellite_url: Optional[str] = None
     created_at: datetime
     is_published: bool
@@ -264,12 +265,3 @@ class NationalSummary(BaseModel):
     most_flagged_district: str
     most_improved_district: str
     last_updated: datetime
-
-
-# ── WhatsApp ────────────────────────────────────────────────────────────────
-
-class WhatsAppInbound(BaseModel):
-    From: str
-    Body: str
-    MessageSid: Optional[str] = None
-    NumMedia: Optional[str] = "0"

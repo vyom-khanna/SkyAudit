@@ -114,13 +114,23 @@ def update_anomaly_status(
     if not anomaly:
         raise HTTPException(status_code=404, detail="Anomaly not found")
 
-    # Officers can only update anomalies in their district
+    # Officers can only update anomalies in their district/state
+    school = db.query(School).filter(School.udise_code == anomaly.udise_code).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
     if officer.district_code:
-        school = db.query(School).filter(School.udise_code == anomaly.udise_code).first()
-        if school and school.district_code != officer.district_code:
+        if school.district_code != officer.district_code:
             raise HTTPException(
                 status_code=403,
                 detail="You can only update anomalies in your district",
+            )
+    elif officer.state_code:
+        district = db.query(District).filter(District.district_code == school.district_code).first()
+        if not district or district.state_code != officer.state_code:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only update anomalies in your state",
             )
 
     old_status = anomaly.status

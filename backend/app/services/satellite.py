@@ -20,9 +20,8 @@ DEMO_SATELLITE_URLS = [
 ]
 
 FALLBACK_THUMBNAIL = (
-    "https://services.sentinel-hub.com/ogc/wms/placeholder"
-    "?REQUEST=GetMap&BBOX=80.9,26.8,81.1,27.0&CRS=EPSG:4326"
-    "&LAYERS=TRUE_COLOR&FORMAT=image/jpeg&WIDTH=400&HEIGHT=400"
+    "https://images.unsplash.com/photo-1502759683299-cdcd6974244f"
+    "?auto=format&fit=crop&w=400&h=400&q=80"
 )
 
 
@@ -236,14 +235,14 @@ def export_thumbnail(lat: float, lng: float, zoom: int = 17) -> str:
 
 
 def _build_demo_thumbnail_url(lat: float, lng: float) -> str:
-    """Build a public Sentinel Hub WMS URL for demo (no auth needed for low-res)."""
-    delta = 0.005
-    bbox = f"{lng-delta},{lat-delta},{lng+delta},{lat+delta}"
-    return (
-        f"https://services.sentinel-hub.com/ogc/wms/demo"
-        f"?REQUEST=GetMap&BBOX={bbox}&CRS=EPSG:4326"
-        f"&LAYERS=TRUE_COLOR&FORMAT=image/jpeg&WIDTH=400&HEIGHT=400"
-    )
+    """Build a deterministic premium Unsplash satellite placeholder URL."""
+    urls = [
+        "https://images.unsplash.com/photo-1502759683299-cdcd6974244f?auto=format&fit=crop&w=400&h=400&q=80",
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&h=400&q=80",
+        "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=400&h=400&q=80"
+    ]
+    idx = int((abs(lat or 0) + abs(lng or 0)) * 1000) % len(urls)
+    return urls[idx]
 
 
 def _demo_image_response(lat: float, lng: float) -> Dict[str, Any]:

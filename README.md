@@ -1,14 +1,14 @@
-# SchoolTruth 🛰️
+# SkyAudit 🛰️
 ## Satellite-Powered Government School Accountability Platform for India
 
-SchoolTruth uses Sentinel-2 satellite imagery, census data, and AI to detect fraud and irregularities in India's government school system — ghost schools, enrollment inflation, meal fraud, construction scams, and more.
+SkyAudit uses Sentinel-2 satellite imagery, census data, and AI to detect fraud and irregularities in India's government school system — ghost schools, enrollment inflation, meal fraud, construction scams, and more.
 
 ---
 
 ## Architecture
 
 ```
-schooltruth/
+skyaudit/
 ├── backend/          FastAPI + SQLAlchemy + PostGIS
 │   ├── app/
 │   │   ├── main.py           FastAPI application entry point
@@ -127,7 +127,7 @@ This will:
 ### 3. Access the platform
 - **Frontend**: http://localhost:3000
 - **API docs**: http://localhost:8000/docs
-- **Demo login**: `demo@schooltruth.in` / `demo1234`
+- **Demo login**: `demo@skyaudit.in` / `demo1234`
 
 ---
 
@@ -141,7 +141,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Set up PostgreSQL with PostGIS, then:
-export DATABASE_URL=postgresql://user:pass@localhost:5432/schooltruth
+export DATABASE_URL=postgresql://user:pass@localhost:5432/skyaudit
 python -c "from app.database import init_db; init_db()"
 python data/processing/anomaly_scorer.py  # seed data
 
@@ -208,7 +208,7 @@ Send any 11-digit UDISE code to the configured WhatsApp number:
 ```
 You: 09140100001
 
-SchoolTruth: 🏫 Govt Primary School Sitapur 1
+SkyAudit: 🏫 Govt Primary School Sitapur 1
              📍 Sitapur, Sitapur, Uttar Pradesh
 
              ✅ Building: Verified (94% confidence)
@@ -224,7 +224,7 @@ SchoolTruth: 🏫 Govt Primary School Sitapur 1
              ₹3.2L in flagged funds
              Last checked: 2 days ago
 
-             Full report: schooltruth.in/09140100001
+             Full report: skyaudit.in/09140100001
 ```
 
 ---

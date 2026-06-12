@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
 from app.models import (
-    School, District, Verification, Anomaly, PulseEvent,
+    School, District, Verification, Anomaly, PulseEvent, Notice,
     VerificationStatus, AnomalyType, AnomalySeverity, AnomalyStatus,
 )
 from app.services import (
@@ -21,7 +21,6 @@ from app.services import (
     budget_efficiency,
 )
 from app.ml.building_detector import detect_building_at_coordinate, estimate_capacity
-from app.services.notice_generator import generate_notice
 
 logger = logging.getLogger(__name__)
 
@@ -147,9 +146,28 @@ def run_all_modules(udise_code: str, db: Session) -> Dict[str, Any]:
     for anomaly in anomalies_created:
         if anomaly.severity == AnomalySeverity.critical:
             try:
-                generate_notice(anomaly.id, db)
+                # Directly create a Notice record for historical tracking in dashboard
+                response_deadline = datetime.utcnow() + timedelta(days=30)
+                notice = Notice(
+                    anomaly_id=anomaly.id,
+                    sent_to="Ministry",
+                    sent_at=datetime.utcnow(),
+                    response_deadline=response_deadline,
+                    response_received=False,
+                    cc_list=[
+                        f"deo-{school.district_code}@education.gov.in",
+                        "education-secretary@state.gov.in",
+                        "education-ministry@nic.in",
+                    ],
+                    escalation_level=1,
+                )
+                db.add(notice)
+                anomaly.notice_sent_at = datetime.utcnow()
+                anomaly.response_due_at = response_deadline
+                anomaly.status = AnomalyStatus.noticed
+                db.commit()
             except Exception as exc:
-                logger.error(f"Notice generation failed for anomaly {anomaly.id}: {exc}")
+                logger.error(f"Failed to create notice record for anomaly {anomaly.id}: {exc}")
 
     return {
         "udise_code": udise_code,
@@ -325,7 +343,7 @@ def _save_verifications(
             satellite_image_url=result.get("satellite_image_url"),
             evidence_url=result.get("evidence_url"),
             verified_at=datetime.utcnow(),
-            data_source="schooltruth_engine_v1",
+            data_source="skyaudit_engine_v1",
         )
         db.add(v)
     db.commit()

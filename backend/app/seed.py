@@ -11,9 +11,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 # Add backend to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.database import SessionLocal, init_db
 from app.models import (
@@ -138,15 +139,38 @@ def _make_verifications(school: School, category: str) -> list:
     verifications = []
 
     module_statuses = _decide_module_statuses(category)
+    
+    from app.services.satellite import _init_ee, get_sentinel2_image
+    from app.ml.building_detector import detect_building_at_coordinate
+    
+    ee_available = _init_ee()
 
     for module_id, status in module_statuses.items():
         enrollment = school.reported_enrollment
 
         if status == "ghost":
             reported_val = f"Building exists, {enrollment} students enrolled"
-            verified_val = "No building detected within 100m radius"
             discrepancy = enrollment * 220 * 8.17 + school.reported_teachers * 350_000
-            sat_url = _demo_satellite_url(school.latitude, school.longitude, "before")
+            
+            if ee_available and category == "red":
+                try:
+                    res = detect_building_at_coordinate(school.latitude, school.longitude)
+                    footprint = res.get("footprint_sqm", 0.0)
+                    verified_val = f"No building detected within 100m (footprint: {footprint:.1f} sqm)"
+                    
+                    img_res = get_sentinel2_image(
+                        school.latitude, school.longitude,
+                        (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%d"),
+                        datetime.utcnow().strftime("%Y-%m-%d")
+                    )
+                    sat_url = img_res.get("image_url") or _demo_satellite_url(school.latitude, school.longitude, "before")
+                except Exception as e:
+                    logger.warning(f"GEE call failed in seed for {school.udise_code}: {e}")
+                    verified_val = "No building detected within 100m radius"
+                    sat_url = _demo_satellite_url(school.latitude, school.longitude, "before")
+            else:
+                verified_val = "No building detected within 100m radius"
+                sat_url = _demo_satellite_url(school.latitude, school.longitude, "before")
         elif status == "anomaly":
             if module_id == 3:
                 capacity = int(enrollment * rng.uniform(0.30, 0.65))
@@ -185,7 +209,7 @@ def _make_verifications(school: School, category: str) -> list:
             satellite_image_url=sat_url,
             evidence_url=sat_url,
             verified_at=datetime.utcnow() - timedelta(days=rng.randint(0, 5)),
-            data_source="schooltruth_seed_v1",
+            data_source="skyaudit_seed_v1",
         ))
 
     return verifications
@@ -222,14 +246,20 @@ def _generic_reported(module_id: int, school: School) -> str:
 
 
 def _demo_satellite_url(lat: float, lng: float, image_type: str = "latest") -> str:
-    delta = 0.003
-    bbox = f"{lng-delta},{lat-delta},{lng+delta},{lat+delta}"
-    return (
-        f"https://services.sentinel-hub.com/ogc/wms/demo"
-        f"?REQUEST=GetMap&BBOX={bbox}&CRS=EPSG:4326"
-        f"&LAYERS=TRUE_COLOR&FORMAT=image/jpeg&WIDTH=400&HEIGHT=400"
-        f"&TIME=2024-01-01/2024-03-31"
-    )
+    urls = [
+        "https://images.unsplash.com/photo-1502759683299-cdcd6974244f?auto=format&fit=crop&w=400&h=400&q=80",
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&h=400&q=80",
+        "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=400&h=400&q=80",
+        "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=400&h=400&q=80",
+        "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&w=400&h=400&q=80"
+    ]
+    val = abs(lat or 0) + abs(lng or 0)
+    if image_type == "before":
+        val += 0.1
+    elif image_type == "after":
+        val += 0.2
+    idx = int(val * 1000) % len(urls)
+    return urls[idx]
 
 
 def _make_anomaly(school: School, category: str) -> Anomaly:
@@ -285,6 +315,23 @@ def _make_anomaly(school: School, category: str) -> Anomaly:
         status = AnomalyStatus.resolved
 
     lat, lng = school.latitude, school.longitude
+    sat_before = None
+    sat_after = None
+    if category == "red":
+        from app.services.satellite import _init_ee, get_before_after_images
+        if _init_ee():
+            try:
+                before_img, after_img = get_before_after_images(lat, lng, detected_at)
+                sat_before = before_img.get("image_url")
+                sat_after = after_img.get("image_url")
+            except Exception as e:
+                logger.warning(f"GEE before/after image fetch failed for {school.udise_code}: {e}")
+        
+        if not sat_before:
+            sat_before = _demo_satellite_url(lat, lng, "before")
+        if not sat_after:
+            sat_after = _demo_satellite_url(lat, lng, "after")
+
     return Anomaly(
         udise_code=school.udise_code,
         anomaly_type=atype,
@@ -297,8 +344,8 @@ def _make_anomaly(school: School, category: str) -> Anomaly:
         notice_sent_at=notice_sent_at,
         response_due_at=response_due_at,
         resolved_at=datetime.utcnow() - timedelta(days=rng.randint(1, 10)) if status == AnomalyStatus.resolved else None,
-        satellite_before_url=_demo_satellite_url(lat, lng, "before") if category == "red" else None,
-        satellite_after_url=_demo_satellite_url(lat, lng, "after") if category == "red" else None,
+        satellite_before_url=sat_before,
+        satellite_after_url=sat_after,
         evidence_json={"seed": True, "category": category},
     )
 
@@ -349,9 +396,60 @@ def _make_pulse_event(anomaly: Anomaly, school: School) -> PulseEvent:
     )
 
 
+def _generate_synthetic_census() -> pd.DataFrame:
+    """Generate realistic synthetic census data for UP districts."""
+    up_districts = [
+        ("09001", "Agra"), ("09002", "Aligarh"), ("09003", "Allahabad"),
+        ("09004", "Ambedkar Nagar"), ("09005", "Amethi"), ("09006", "Amroha"),
+        ("09007", "Auraiya"), ("09008", "Azamgarh"), ("09009", "Baghpat"),
+        ("09010", "Bahraich"), ("09011", "Ballia"), ("09012", "Balrampur"),
+        ("09013", "Banda"), ("09014", "Barabanki"), ("09015", "Bareilly"),
+        ("09016", "Basti"), ("09017", "Bijnor"), ("09018", "Budaun"),
+        ("09019", "Bulandshahr"), ("09020", "Chandauli"), ("09021", "Chitrakoot"),
+        ("09022", "Deoria"), ("09023", "Etah"), ("09024", "Etawah"),
+        ("09025", "Faizabad"), ("09026", "Farrukhabad"), ("09027", "Fatehpur"),
+        ("09028", "Firozabad"), ("09029", "Gautam Buddha Nagar"), ("09030", "Ghaziabad"),
+        ("09031", "Ghazipur"), ("09032", "Gonda"), ("09033", "Gorakhpur"),
+        ("09034", "Hamirpur"), ("09035", "Hapur"), ("09036", "Hardoi"),
+        ("09037", "Hathras"), ("09038", "Jalaun"), ("09039", "Jaunpur"),
+        ("09040", "Jhansi"), ("09041", "Kannauj"), ("09042", "Kanpur Dehat"),
+        ("09043", "Kanpur Nagar"), ("09044", "Kasganj"), ("09045", "Kaushambi"),
+        ("09046", "Kheri"), ("09047", "Kushinagar"), ("09048", "Lalitpur"),
+        ("09049", "Lucknow"), ("09050", "Maharajganj"), ("09051", "Mahoba"),
+        ("09052", "Mainpuri"), ("09053", "Mathura"), ("09054", "Mau"),
+        ("09055", "Meerut"), ("09056", "Mirzapur"), ("09057", "Moradabad"),
+        ("09058", "Muzaffarnagar"), ("09059", "Pilibhit"), ("09060", "Pratapgarh"),
+        ("09061", "Raebareli"), ("09062", "Rampur"), ("09063", "Saharanpur"),
+        ("09064", "Sambhal"), ("09065", "Sant Kabir Nagar"), ("09066", "Sant Ravidas Nagar"),
+        ("09067", "Shahjahanpur"), ("09068", "Shamli"), ("09069", "Shrawasti"),
+        ("09070", "Siddharthnagar"), ("09071", "Sitapur"), ("09072", "Sonbhadra"),
+        ("09073", "Sultanpur"), ("09074", "Unnao"), ("09075", "Varanasi"),
+    ]
+
+    current_year = datetime.utcnow().year
+    years_elapsed = current_year - 2011  # CENSUS_YEAR
+    growth_factor = (1 + 0.012) ** years_elapsed  # ANNUAL_GROWTH_RATE
+
+    records = []
+    for code, name in up_districts:
+        pop_2011 = rng.randint(80_000, 350_000)
+        projected = int(pop_2011 * growth_factor)
+        records.append({
+            "district_code": code,
+            "district_name": name,
+            "state_code": "09",
+            "state_name": "Uttar Pradesh",
+            "school_age_population_2011": pop_2011,
+            "school_age_population_projected": projected,
+            "projection_year": current_year,
+            "growth_factor": round(growth_factor, 4),
+        })
+
+    return pd.DataFrame(records)
+
+
 def _seed_all_up_districts(db) -> None:
     """Seed accountability scores for all 75 UP districts."""
-    from data.ingestion.census_loader import _generate_synthetic_census
     census_df = _generate_synthetic_census()
 
     for _, row in census_df.iterrows():
@@ -395,7 +493,7 @@ def _seed_officers(db) -> None:
             "role": "DEO",
             "district_code": DISTRICT_CODE,
             "state_code": STATE_CODE,
-            "password": "schooltruth2024",
+            "password": "skyaudit2024",
         },
         {
             "email": "state.education@up.gov.in",
@@ -403,10 +501,10 @@ def _seed_officers(db) -> None:
             "role": "State",
             "district_code": None,
             "state_code": STATE_CODE,
-            "password": "schooltruth2024",
+            "password": "skyaudit2024",
         },
         {
-            "email": "demo@schooltruth.in",
+            "email": "demo@skyaudit.in",
             "name": "Demo User (Full Access)",
             "role": "Ministry",
             "district_code": None,
@@ -441,7 +539,7 @@ def _seed_officers(db) -> None:
 
 def run_seed():
     """Main seed function — runs all steps in order."""
-    logger.info("=== SchoolTruth Seed Script Starting ===")
+    logger.info("=== SkyAudit Seed Script Starting ===")
     init_db()
     db = SessionLocal()
 
@@ -539,17 +637,40 @@ def run_seed():
             )
             if c == "red"
         ]
+        from app.services.satellite import _init_ee, get_sentinel2_image
+        ee_available = _init_ee()
         for school in ghost_schools[:25]:
             from datetime import date
+            sat_url = None
+            ndbi_score = None
+            source_name = "demo"
+            if ee_available:
+                try:
+                    img_res = get_sentinel2_image(
+                        school.latitude, school.longitude,
+                        (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d"),
+                        datetime.utcnow().strftime("%Y-%m-%d")
+                    )
+                    sat_url = img_res.get("image_url")
+                    ndbi_score = img_res.get("ndbi")
+                    source_name = img_res.get("source")
+                except Exception as e:
+                    logger.warning(f"GEE call failed in SatelliteCapture seed for {school.udise_code}: {e}")
+            
+            if not sat_url:
+                sat_url = _demo_satellite_url(school.latitude, school.longitude)
+            if ndbi_score is None:
+                ndbi_score = round(rng.uniform(-0.15, 0.01), 4)
+
             cap = SatelliteCapture(
                 udise_code=school.udise_code,
                 capture_date=date.today() - timedelta(days=rng.randint(1, 5)),
-                image_url=_demo_satellite_url(school.latitude, school.longitude),
-                ndbi_score=round(rng.uniform(-0.15, 0.01), 4),  # negative = no building
+                image_url=sat_url,
+                ndbi_score=ndbi_score,  # negative = no building
                 building_detected=False,
                 building_confidence=round(rng.uniform(0.82, 0.97), 3),
                 building_footprint_sqm=0.0,
-                source="sentinel2",
+                source=source_name,
             )
             db.add(cap)
         db.commit()
@@ -574,7 +695,7 @@ def run_seed():
                     f"yellow={categories.count('yellow')} "
                     f"orange={categories.count('orange')} "
                     f"red={categories.count('red')}")
-        logger.info(f"\nDemo login: demo@schooltruth.in / demo1234")
+        logger.info(f"\nDemo login: demo@skyaudit.in / demo1234")
 
     except Exception as exc:
         db.rollback()

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://schooltruth:schooltruth@localhost:5432/schooltruth"
+    "postgresql://skyaudit:skyaudit@localhost:5432/skyaudit"
 )
 
 _scheduler: BackgroundScheduler = None
@@ -53,19 +53,7 @@ def start_scheduler():
         misfire_grace_time=3600,
     )
 
-    # ── Job 2: MDM portal re-scrape (1st of every month) ─────────────────
-    scheduler.add_job(
-        func=_job_mdm_scrape,
-        trigger="cron",
-        day=1,
-        hour=2,
-        minute=0,
-        id="mdm_monthly_scrape",
-        name="PM Poshan MDM portal monthly scrape",
-        replace_existing=True,
-    )
-
-    # ── Job 3: Weekly state reports (every Monday 6am IST) ────────────────
+    # ── Job 2: Weekly state reports (every Monday 6am IST) ────────────────
     scheduler.add_job(
         func=_job_weekly_reports,
         trigger="cron",
@@ -77,32 +65,20 @@ def start_scheduler():
         replace_existing=True,
     )
 
-    # ── Job 4: Daily escalation check ─────────────────────────────────────
+    # ── Job 2: Weekly state reports (every Monday 6am IST) ────────────────
     scheduler.add_job(
-        func=_job_check_escalations,
+        func=_job_weekly_reports,
         trigger="cron",
-        hour=7,
-        minute=30,
-        id="daily_escalation_check",
-        name="Daily notice escalation checker",
-        replace_existing=True,
-    )
-
-    # ── Job 5: Annual board results scrape (April 15) ─────────────────────
-    scheduler.add_job(
-        func=_job_board_results,
-        trigger="cron",
-        month=4,
-        day=15,
-        hour=8,
+        day_of_week="mon",
+        hour=6,
         minute=0,
-        id="annual_board_results",
-        name="Annual board results scrape and outcome verification",
+        id="weekly_state_reports",
+        name="Weekly state accountability reports",
         replace_existing=True,
     )
 
     scheduler.start()
-    logger.info("SchoolTruth scheduler started with 5 jobs")
+    logger.info("SkyAudit scheduler started with 2 jobs")
 
 
 def stop_scheduler():
@@ -134,16 +110,7 @@ def _job_satellite_update():
         db.close()
 
 
-def _job_mdm_scrape():
-    """Re-scrape PM Poshan MDM portal."""
-    try:
-        from data.ingestion.mdm_scraper import scrape_mdm_portal
-        result = scrape_mdm_portal()
-        logger.info(f"[mdm_scrape] {result.get('records_scraped', 0)} records updated")
-        _log_job("mdm_monthly_scrape", "success", result)
-    except Exception as exc:
-        logger.error(f"[mdm_scrape] Failed: {exc}")
-        _log_job("mdm_monthly_scrape", "error", {"error": str(exc)})
+
 
 
 def _job_weekly_reports():
@@ -171,51 +138,10 @@ def _job_weekly_reports():
         db.close()
 
 
-def _job_check_escalations():
-    """Find overdue notices and escalate."""
-    from app.database import SessionLocal
-    from app.services.notice_generator import check_escalations
-
-    db = SessionLocal()
-    try:
-        count = check_escalations(db)
-        logger.info(f"[escalations] {count} notices escalated")
-        _log_job("daily_escalation_check", "success", {"escalated": count})
-    except Exception as exc:
-        logger.error(f"[escalations] Failed: {exc}")
-        _log_job("daily_escalation_check", "error", {"error": str(exc)})
-    finally:
-        db.close()
 
 
-def _job_board_results():
-    """Scrape board results and run outcome verification for all schools."""
-    try:
-        from data.ingestion.board_results_scraper import scrape_board_results
-        from app.database import SessionLocal
-        from app.models import School
-        from app.services.anomaly_engine import run_all_modules
 
-        result = scrape_board_results()
-        logger.info(f"[board_results] Scraped {result.get('records', 0)} school results")
 
-        db = SessionLocal()
-        try:
-            schools = db.query(School).filter(
-                School.management_type == "government"
-            ).limit(500).all()
-            for school in schools:
-                try:
-                    run_all_modules(school.udise_code, db)
-                except Exception as exc:
-                    logger.error(f"Outcome module failed for {school.udise_code}: {exc}")
-        finally:
-            db.close()
-
-        _log_job("annual_board_results", "success", result)
-    except Exception as exc:
-        logger.error(f"[board_results] Failed: {exc}")
-        _log_job("annual_board_results", "error", {"error": str(exc)})
 
 
 def _generate_state_report(state_code: str, state_name: str, db) -> None:
@@ -253,7 +179,7 @@ def _generate_state_report(state_code: str, state_name: str, db) -> None:
     total_funds_new = sum(a.funds_at_risk_inr for a in new_anomalies)
 
     subject = (
-        f"SchoolTruth Weekly — {state_name} | "
+        f"SkyAudit Weekly — {state_name} | "
         f"{datetime.utcnow().strftime('%d %b %Y')} | "
         f"{len(new_anomalies)} new anomalies | "
         f"₹{total_funds_new/10_000_000:.1f}Cr flagged"
@@ -267,14 +193,11 @@ def _generate_state_report(state_code: str, state_name: str, db) -> None:
         state_name, new_anomalies, resolved, total_funds_new
     )
 
-    from app.services.notice_generator import _send_email
     _send_email(
         to_email=recipients[0],
         cc_list=recipients[1:],
         subject=subject,
         body_html=html,
-        attachment_bytes=b"",
-        attachment_name="",
     )
 
 
@@ -293,7 +216,7 @@ def _build_weekly_report_html(state_name, new_anomalies, resolved, total_funds) 
     return f"""
 <html><body style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
 <div style="background:#2c3e50;color:white;padding:20px;">
-  <h1 style="margin:0;">SchoolTruth Weekly Report</h1>
+  <h1 style="margin:0;">SkyAudit Weekly Report</h1>
   <p style="margin:5px 0;">{state_name} | {datetime.utcnow().strftime('%d %B %Y')}</p>
 </div>
 <div style="padding:20px;">
@@ -324,7 +247,7 @@ def _build_weekly_report_html(state_name, new_anomalies, resolved, total_funds) 
     <tbody>{anomaly_rows}</tbody>
   </table>
   <p style="margin-top:20px;font-size:12px;color:#666;">
-    Full report: <a href="https://schooltruth.in">schooltruth.in</a>
+    Full report: <a href="https://skyaudit.in">skyaudit.in</a>
   </p>
 </div>
 </body></html>
@@ -345,3 +268,40 @@ def _get_state_recipients(state_code: str):
 
 def _log_job(job_id: str, status: str, result: dict) -> None:
     logger.info(f"JOB [{job_id}] status={status} result={result}")
+
+
+def _send_email(
+    to_email: str,
+    cc_list: list,
+    subject: str,
+    body_html: str,
+) -> None:
+    """Send email via SendGrid API."""
+    SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+    FROM_EMAIL = os.getenv("FROM_EMAIL", "notices@skyaudit.in")
+    
+    if not SENDGRID_API_KEY:
+        logger.warning(f"SENDGRID_API_KEY not set — email to {to_email} skipped")
+        return
+
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+
+        message = Mail(
+            from_email=FROM_EMAIL,
+            to_emails=to_email,
+            subject=subject,
+            html_content=body_html,
+        )
+
+        for cc_email in cc_list:
+            if cc_email and cc_email != to_email:
+                message.add_cc(cc_email)
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        logger.info(f"Email sent to {to_email} — status {response.status_code}")
+
+    except Exception as exc:
+        logger.error(f"SendGrid email failed: {exc}")

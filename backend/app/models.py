@@ -208,6 +208,10 @@ class PulseEvent(Base):
 
     anomaly = relationship("Anomaly", back_populates="pulse_events")
 
+    @property
+    def udise_code(self):
+        return self.anomaly.udise_code if self.anomaly else None
+
     __table_args__ = (Index("idx_pulse_created", "created_at"),)
 
 

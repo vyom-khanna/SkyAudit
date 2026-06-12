@@ -8,7 +8,7 @@ export function ShareButton({ url, title, className = '' }) {
     const shareUrl = url || window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: title || 'SchoolTruth Report', url: shareUrl });
+        await navigator.share({ title: title || 'SkyAudit Report', url: shareUrl });
         return;
       } catch (_) {}
     }

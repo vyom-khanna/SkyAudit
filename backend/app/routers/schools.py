@@ -10,6 +10,7 @@ from app.schemas import (
     NoticeOut, SatelliteCaptureOut, ModuleResult, CommunityFlag
 )
 from app.services.anomaly_engine import run_all_modules
+from app.routers.auth import get_current_officer
 
 router = APIRouter(prefix="/schools", tags=["schools"])
 
@@ -192,7 +193,11 @@ def flag_school(udise_code: str, flag: CommunityFlag, db: Session = Depends(get_
 
 
 @router.post("/{udise_code}/verify", status_code=status.HTTP_202_ACCEPTED)
-def trigger_verification(udise_code: str, db: Session = Depends(get_db)):
+def trigger_verification(
+    udise_code: str,
+    db: Session = Depends(get_db),
+    officer=Depends(get_current_officer),
+):
     """Manually trigger full verification for a school (admin/testing use)."""
     school = db.query(School).filter(School.udise_code == udise_code).first()
     if not school:
