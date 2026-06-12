@@ -420,22 +420,82 @@ def _emit_pulse_event(
 # ── Stub data fetchers (connect to ingestion tables in production) ────────────
 
 def _fetch_grants(udise_code: str, db: Session) -> List[Dict]:
+    import random, hashlib
+    # Deterministic check: ~25% of schools have a grant
+    seed = int(hashlib.md5(f"grant_{udise_code}".encode()).hexdigest(), 16) % 100
+    if seed < 25:
+        rng = random.Random(seed)
+        amount = rng.choice([200000.0, 500000.0, 800000.0])
+        days_ago = rng.randint(30, 360)
+        release_date = (datetime.utcnow() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
+        return [{
+            "grant_amount_inr": amount,
+            "release_date": release_date,
+            "purpose": "Building extension & structural repairs"
+        }]
     return []
 
 
 def _fetch_mdm(udise_code: str, db: Session) -> Optional[Dict]:
-    return None
+    import random, hashlib
+    seed = int(hashlib.md5(f"mdm_{udise_code}".encode()).hexdigest(), 16) % 100
+    school = db.query(School).filter(School.udise_code == udise_code).first()
+    if not school:
+        return None
+    rng = random.Random(seed)
+    # Generate claimed meals. 20% of schools have meal discrepancies.
+    reported = school.reported_meals_daily or 100
+    if seed < 20:
+        claimed = int(reported * rng.uniform(1.3, 1.8))
+    else:
+        claimed = reported
+    return {
+        "meals_claimed_annual": claimed * 220,
+        "meals_claimed_monthly": claimed * 20
+    }
 
 
 def _fetch_board_results(udise_code: str, db: Session) -> Optional[Dict]:
-    return None
+    import random, hashlib
+    seed = int(hashlib.md5(f"board_{udise_code}".encode()).hexdigest(), 16) % 100
+    school = db.query(School).filter(School.udise_code == udise_code).first()
+    if not school:
+        return None
+    rng = random.Random(seed)
+    # 20% chance of suspiciously inflated pass rates
+    is_inflated = seed < 20
+    if is_inflated:
+        pass_rate = rng.uniform(0.94, 0.99)
+    else:
+        pass_rate = rng.uniform(0.60, 0.85)
+    appeared = rng.randint(15, 60)
+    return {
+        "reported_pass_rate": pass_rate,
+        "total_appeared": appeared,
+        "total_passed": int(appeared * pass_rate),
+        "year": "2024"
+    }
 
 
 def _fetch_aser(district_code: str, db: Session) -> Optional[Dict]:
-    return None
+    import random, hashlib
+    seed = int(hashlib.md5(f"aser_{district_code}".encode()).hexdigest(), 16) % 100
+    rng = random.Random(seed)
+    return {
+        "pct_can_read_std2": rng.uniform(0.40, 0.60),
+        "pct_can_do_division": rng.uniform(0.25, 0.40)
+    }
 
 
 def _fetch_cag(district_code: str, db: Session) -> List[Dict]:
+    import random, hashlib
+    seed = int(hashlib.md5(f"cag_{district_code}".encode()).hexdigest(), 16) % 100
+    # 30% of districts have CAG warnings
+    if seed < 30:
+        return [{
+            "severity": "high",
+            "finding_type": "Teacher Absenteeism / Ghost Teachers"
+        }]
     return []
 
 
