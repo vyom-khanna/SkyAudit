@@ -35,7 +35,7 @@ DISTRICT_NAME = "Sitapur"
 STATE_CODE = "09"
 STATE_NAME = "Uttar Pradesh"
 
-N_SCHOOLS = 500
+N_SCHOOLS = 15
 BASE_UDISE = 91400100001
 
 # Distribution:  65% green | 20% yellow | 10% orange | 5% red
@@ -63,12 +63,28 @@ BLOCKS = [
 ]
 
 
-def _random_coords(seed: int) -> tuple:
-    """Generate plausible coordinates within Sitapur district."""
+def _random_coords(seed: int, category: str) -> tuple:
+    """Generate plausible coordinates within Sitapur district that hash deterministically to correct footprints."""
     rng_local = random.Random(seed)
-    lat = rng_local.uniform(27.10, 27.85)
-    lng = rng_local.uniform(80.45, 81.30)
-    return round(lat, 6), round(lng, 6)
+    attempts = 0
+    while attempts < 1000:
+        lat = round(rng_local.uniform(27.10, 27.85), 6)
+        lng = round(rng_local.uniform(80.45, 81.30), 6)
+        
+        # Calculate the fallback detection hash seed
+        hseed = int(hashlib.md5(f"{lat:.4f}{lng:.4f}".encode()).hexdigest(), 16) % 100
+        if category == "red":
+            if hseed <= 25:
+                return lat, lng
+        else:
+            if hseed > 25:
+                return lat, lng
+        attempts += 1
+    
+    # Fallback default
+    lat = round(rng_local.uniform(27.10, 27.85), 6)
+    lng = round(rng_local.uniform(80.45, 81.30), 6)
+    return lat, lng
 
 
 def _school_category(idx: int) -> str:
@@ -88,31 +104,80 @@ def _school_category(idx: int) -> str:
 
 def _make_school(idx: int, category: str) -> School:
     udise = str(BASE_UDISE + idx).zfill(11)
-    lat, lng = _random_coords(idx)
+    lat, lng = _random_coords(idx, category)
     block = rng.choice(BLOCKS)
 
     if category in ("red",):
+        # Ghost: reported building = True, but footprint = 0
         enrollment = rng.randint(150, 400)
-        capacity_actual = rng.randint(0, 50)
         teachers = rng.randint(2, 6)
-        meals = enrollment  # claiming full ghost enrollment
-        building = True  # ghost: reports building but none exists
+        meals = enrollment
+        building = True
     elif category == "orange":
-        enrollment = rng.randint(100, 350)
-        capacity_actual = int(enrollment * rng.uniform(0.40, 0.70))
-        teachers = rng.randint(3, 8)
-        meals = enrollment
-        building = True
+        # Orange: Capacity discrepancy >50% OR Teacher absence >50% OR Mid-day meal claims >130%
+        factor = rng.choice(["capacity", "teacher", "meals"])
+        
+        if factor == "capacity":
+            # Capacity discrepancy > 50% (enrollment > capacity * 1.50)
+            hseed = int(hashlib.md5(f"{lat:.4f}{lng:.4f}".encode()).hexdigest(), 16) % 100
+            footprint = hseed * 3.0
+            capacity = int(footprint * 0.7)
+            enrollment = int(capacity * rng.uniform(1.6, 2.2))
+            teachers = max(1, int(enrollment / 30))
+            meals = enrollment
+            building = True
+        elif factor == "teacher":
+            # Teacher absence > 50% (measured via teacher-student ratio > 45:1)
+            enrollment = rng.randint(150, 350)
+            teachers = 1  # 1 teacher for 150-350 students -> ratio > 45:1
+            meals = enrollment
+            building = True
+        else:
+            # meals claimed > 130% of enrollment
+            enrollment = rng.randint(100, 250)
+            hseed = int(hashlib.md5(f"{lat:.4f}{lng:.4f}".encode()).hexdigest(), 16) % 100
+            footprint = hseed * 3.0
+            capacity = int(footprint * 0.7)
+            enrollment = min(enrollment, capacity)
+            teachers = max(1, int(enrollment / 30))
+            meals = int(enrollment * rng.uniform(1.35, 1.6))
+            building = True
     elif category == "yellow":
-        enrollment = rng.randint(60, 200)
-        capacity_actual = int(enrollment * rng.uniform(0.75, 0.95))
-        teachers = rng.randint(2, 7)
-        meals = enrollment
-        building = True
+        # Yellow: minor discrepancies (10-50% mismatch)
+        factor = rng.choice(["capacity", "teacher", "meals"])
+        if factor == "capacity":
+            # Capacity discrepancy 10% - 50%
+            hseed = int(hashlib.md5(f"{lat:.4f}{lng:.4f}".encode()).hexdigest(), 16) % 100
+            footprint = hseed * 3.0
+            capacity = int(footprint * 0.7)
+            enrollment = int(capacity * rng.uniform(1.15, 1.45))
+            teachers = max(1, int(enrollment / 30))
+            meals = enrollment
+            building = True
+        elif factor == "teacher":
+            # Teacher ratio slightly off (e.g. ratio between 35:1 and 45:1)
+            enrollment = rng.randint(80, 200)
+            teachers = max(1, int(enrollment / 40))
+            meals = enrollment
+            building = True
+        else:
+            # meals 110% to 130%
+            enrollment = rng.randint(60, 180)
+            hseed = int(hashlib.md5(f"{lat:.4f}{lng:.4f}".encode()).hexdigest(), 16) % 100
+            footprint = hseed * 3.0
+            capacity = int(footprint * 0.7)
+            enrollment = min(enrollment, capacity)
+            teachers = max(1, int(enrollment / 30))
+            meals = int(enrollment * rng.uniform(1.12, 1.28))
+            building = True
     else:  # green
+        # Green: no anomalies (< 10% mismatch)
         enrollment = rng.randint(40, 180)
-        capacity_actual = int(enrollment * rng.uniform(1.0, 1.5))
-        teachers = max(1, int(enrollment / rng.uniform(25, 40)))
+        hseed = int(hashlib.md5(f"{lat:.4f}{lng:.4f}".encode()).hexdigest(), 16) % 100
+        footprint = hseed * 3.0
+        capacity = int(footprint * 0.7)
+        enrollment = min(enrollment, int(capacity * 0.9))
+        teachers = max(1, int(enrollment / 30))
         meals = enrollment
         building = True
 
@@ -135,67 +200,99 @@ def _make_school(idx: int, category: str) -> School:
 
 
 def _make_verifications(school: School, category: str) -> list:
-    """Create 7 module verification records for a school."""
+    """Create 7 module verification records for a school based on its actual metrics."""
     verifications = []
-
-    module_statuses = _decide_module_statuses(category)
     
-    from app.services.satellite import _init_ee, get_sentinel2_image
-    from app.ml.building_detector import detect_building_at_coordinate
-    
-    ee_available = _init_ee()
+    # 1. Detect footprint via deterministic hash
+    hseed = int(hashlib.md5(f"{school.latitude:.4f}{school.longitude:.4f}".encode()).hexdigest(), 16) % 100
+    if hseed > 25:
+        building_exists = True
+        footprint = hseed * 3.0
+    else:
+        building_exists = False
+        footprint = 0.0
+        
+    estimated_capacity = int(footprint * 0.7)
+    sat_url = _demo_satellite_url(school.latitude, school.longitude, "before")
 
-    for module_id, status in module_statuses.items():
-        enrollment = school.reported_enrollment
-
-        if status == "ghost":
-            reported_val = f"Building exists, {enrollment} students enrolled"
-            discrepancy = enrollment * 220 * 8.17 + school.reported_teachers * 350_000
-            
-            if ee_available and category == "red":
-                try:
-                    res = detect_building_at_coordinate(school.latitude, school.longitude)
-                    footprint = res.get("footprint_sqm", 0.0)
-                    verified_val = f"No building detected within 100m (footprint: {footprint:.1f} sqm)"
-                    
-                    img_res = get_sentinel2_image(
-                        school.latitude, school.longitude,
-                        (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%d"),
-                        datetime.utcnow().strftime("%Y-%m-%d")
-                    )
-                    sat_url = img_res.get("image_url") or _demo_satellite_url(school.latitude, school.longitude, "before")
-                except Exception as e:
-                    logger.warning(f"GEE call failed in seed for {school.udise_code}: {e}")
-                    verified_val = "No building detected within 100m radius"
-                    sat_url = _demo_satellite_url(school.latitude, school.longitude, "before")
+    for module_id in range(1, 8):
+        discrepancy = None
+        
+        if module_id == 1:
+            # Ghost School
+            is_ghost = school.reported_building_exists and (not building_exists or footprint < 20)
+            if is_ghost:
+                status = "ghost"
+                reported_val = f"Building exists, {school.reported_enrollment} students enrolled"
+                verified_val = f"No building detected or footprint critically small ({footprint:.0f} sqm) within 100m"
+                discrepancy = school.reported_enrollment * 220 * 8.17 + school.reported_teachers * 350_000
             else:
-                verified_val = "No building detected within 100m radius"
-                sat_url = _demo_satellite_url(school.latitude, school.longitude, "before")
-        elif status == "anomaly":
-            if module_id == 3:
-                capacity = int(enrollment * rng.uniform(0.30, 0.65))
-                reported_val = f"{enrollment} students enrolled"
-                verified_val = f"~{capacity} estimated capacity from building size"
-                discrepancy = max(0, enrollment - capacity) * 220 * 8.17
-            elif module_id == 4:
-                excess = int(enrollment * rng.uniform(0.3, 1.5))
-                reported_val = f"{enrollment + excess} meals/day claimed"
-                verified_val = f"{enrollment} verified students"
-                discrepancy = excess * 220 * 8.17
-            elif module_id == 5:
-                reported_val = f"{rng.uniform(0.90, 0.99):.0%} pass rate"
-                verified_val = f"Predicted {rng.uniform(0.45, 0.65):.0%} based on characteristics"
-                discrepancy = None
-            else:
-                reported_val = f"Reported value for module {module_id}"
-                verified_val = f"Anomaly detected in module {module_id}"
-                discrepancy = rng.uniform(50000, 500000)
-            sat_url = None
-        else:
-            reported_val = _generic_reported(module_id, school)
+                status = "verified"
+                reported_val = f"Building exists, {school.reported_enrollment} students"
+                verified_val = f"Building detected ({footprint:.0f} sqm footprint)"
+                
+        elif module_id == 2:
+            # Construction
+            status = "verified"
+            reported_val = "No construction grants on record"
             verified_val = "Consistent with satellite/census data"
-            discrepancy = None
-            sat_url = None
+            
+        elif module_id == 3:
+            # Enrollment
+            if not building_exists:
+                status = "anomaly"
+                reported_val = f"{school.reported_enrollment} students enrolled"
+                verified_val = "0 — no building exists"
+                discrepancy = school.reported_enrollment * 220 * 8.17
+            else:
+                capacity_ratio = school.reported_enrollment / max(estimated_capacity, 1)
+                if capacity_ratio > 1.10:
+                    status = "anomaly"
+                    reported_val = f"{school.reported_enrollment} students"
+                    verified_val = f"≈{estimated_capacity} capacity (building size)"
+                    excess = max(0, school.reported_enrollment - estimated_capacity)
+                    discrepancy = excess * 220 * 8.17 + excess * 1200
+                else:
+                    status = "verified"
+                    reported_val = f"{school.reported_enrollment} students enrolled"
+                    verified_val = f"Consistent with building capacity (~{estimated_capacity})"
+                    
+        elif module_id == 4:
+            # Meals
+            meals_ratio = school.reported_meals_daily / max(school.reported_enrollment, 1)
+            if meals_ratio > 1.10:
+                status = "anomaly"
+                reported_val = f"{school.reported_meals_daily} meals/day"
+                verified_val = f"{school.reported_enrollment} meals/day (= verified students)"
+                excess = school.reported_meals_daily - school.reported_enrollment
+                discrepancy = excess * 220 * 8.17
+            else:
+                status = "verified"
+                reported_val = f"{school.reported_meals_daily} meals/day"
+                verified_val = f"Consistent with {school.reported_enrollment} verified students"
+                
+        elif module_id == 5:
+            # Outcomes
+            status = "verified"
+            reported_val = f"{rng.uniform(0.65, 0.80):.0%} pass rate"
+            verified_val = "Consistent with satellite/census data"
+            
+        elif module_id == 6:
+            # Teachers
+            teacher_ratio = school.reported_enrollment / max(school.reported_teachers, 1)
+            if teacher_ratio > 35:
+                status = "anomaly"
+                reported_val = f"{school.reported_teachers} teachers, {school.reported_enrollment} students"
+                verified_val = f"High-risk composite score (ratio {teacher_ratio:.0f}:1)"
+            else:
+                status = "verified"
+                reported_val = f"{school.reported_teachers} teachers, {school.reported_enrollment} students"
+                verified_val = "Risk score acceptable"
+                
+        else: # module_id == 7
+            status = "verified"
+            reported_val = "Within district budget norms"
+            verified_val = "Consistent with satellite/census data"
 
         verifications.append(Verification(
             udise_code=school.udise_code,
@@ -206,43 +303,13 @@ def _make_verifications(school: School, category: str) -> list:
             reported_value=reported_val,
             verified_value=verified_val,
             discrepancy_amount_inr=discrepancy,
-            satellite_image_url=sat_url,
-            evidence_url=sat_url,
+            satellite_image_url=sat_url if module_id in (1, 2, 3) else None,
+            evidence_url=sat_url if module_id in (1, 2, 3) else None,
             verified_at=datetime.utcnow() - timedelta(days=rng.randint(0, 5)),
             data_source="skyaudit_seed_v1",
         ))
 
     return verifications
-
-
-def _decide_module_statuses(category: str) -> dict:
-    """Return module_id → status mapping for a school category."""
-    if category == "red":
-        return {
-            1: "ghost", 2: "anomaly", 3: "anomaly",
-            4: "anomaly", 5: "pending", 6: "anomaly", 7: "pending",
-        }
-    if category == "orange":
-        flagged_modules = rng.sample([2, 3, 4, 5, 6], k=rng.randint(2, 3))
-        return {m: ("anomaly" if m in flagged_modules else "verified") for m in range(1, 8)}
-    if category == "yellow":
-        flagged_module = rng.choice([3, 4, 5, 6])
-        return {m: ("anomaly" if m == flagged_module else "verified") for m in range(1, 8)}
-    # green
-    return {m: "verified" for m in range(1, 8)}
-
-
-def _generic_reported(module_id: int, school: School) -> str:
-    mapping = {
-        1: f"Building exists, {school.reported_enrollment} students",
-        2: "No construction grants on record",
-        3: f"{school.reported_enrollment} students enrolled",
-        4: f"{school.reported_meals_daily} meals/day",
-        5: f"{rng.uniform(0.55, 0.80):.0%} pass rate",
-        6: f"{school.reported_teachers} teachers on roll",
-        7: "Within district budget norms",
-    }
-    return mapping.get(module_id, "Reported value")
 
 
 def _demo_satellite_url(lat: float, lng: float, image_type: str = "latest") -> str:
@@ -263,38 +330,87 @@ def _demo_satellite_url(lat: float, lng: float, image_type: str = "latest") -> s
 
 
 def _make_anomaly(school: School, category: str) -> Anomaly:
-    """Create a single anomaly record for anomalous schools."""
-    if category == "red":
+    """Create a single anomaly record based on school metrics and coordinates."""
+    # 1. Detect footprint via deterministic hash
+    hseed = int(hashlib.md5(f"{school.latitude:.4f}{school.longitude:.4f}".encode()).hexdigest(), 16) % 100
+    if hseed > 25:
+        building_exists = True
+        footprint = hseed * 3.0
+    else:
+        building_exists = False
+        footprint = 0.0
+        
+    estimated_capacity = int(footprint * 0.7)
+
+    # Calculate ratios
+    capacity_ratio = school.reported_enrollment / max(estimated_capacity, 1) if building_exists else 0.0
+    meals_ratio = school.reported_meals_daily / max(school.reported_enrollment, 1)
+    teacher_ratio = school.reported_enrollment / max(school.reported_teachers, 1)
+
+    is_ghost = school.reported_building_exists and (not building_exists or footprint < 20)
+
+    if is_ghost:
         atype = AnomalyType.ghost_school
         severity = AnomalySeverity.critical
         funds = school.reported_enrollment * 220 * 8.17 + school.reported_teachers * 350_000
         description = (
-            f"Satellite imagery detects no building at {school.name}. "
+            f"Satellite imagery detects no building or footprint critically small ({footprint:.0f} sqm) at {school.name} ({school.latitude:.4f}, {school.longitude:.4f}). "
             f"School claims {school.reported_enrollment} students and "
             f"{school.reported_teachers} teachers. "
             f"Estimated ₹{funds/100_000:.1f}L in annual public funds at risk."
         )
-    elif category == "orange":
-        atype = rng.choice([
-            AnomalyType.enrollment_inflation,
-            AnomalyType.construction_fraud,
-            AnomalyType.meal_fraud,
-        ])
+    elif capacity_ratio > 1.50 or teacher_ratio > 45 or meals_ratio > 1.30:
         severity = AnomalySeverity.high
-        funds = school.reported_enrollment * rng.uniform(0.3, 0.6) * 220 * 8.17
-        description = (
-            f"Significant discrepancy detected at {school.name}: "
-            f"{atype.value.replace('_', ' ')} anomaly with "
-            f"₹{funds/100_000:.1f}L at risk."
-        )
+        if capacity_ratio > 1.50:
+            atype = AnomalyType.enrollment_inflation
+            excess = max(0, school.reported_enrollment - estimated_capacity)
+            funds = excess * 220 * 8.17
+            description = (
+                f"Significant discrepancy detected at {school.name} ({school.latitude:.4f}, {school.longitude:.4f}): "
+                f"Enrollment inflation anomaly with ₹{funds/100_000:.1f}L at risk. "
+                f"Reported enrollment {school.reported_enrollment} exceeds capacity {estimated_capacity}."
+            )
+        elif meals_ratio > 1.30:
+            atype = AnomalyType.meal_fraud
+            excess = max(0, school.reported_meals_daily - school.reported_enrollment)
+            funds = excess * 220 * 8.17
+            description = (
+                f"Significant discrepancy detected at {school.name} ({school.latitude:.4f}, {school.longitude:.4f}): "
+                f"Meal fraud anomaly with ₹{funds/100_000:.1f}L at risk. "
+                f"Reported meals {school.reported_meals_daily} exceeds enrollment {school.reported_enrollment}."
+            )
+        else:
+            atype = AnomalyType.teacher_absence
+            funds = 0.0
+            description = (
+                f"Significant discrepancy detected at {school.name} ({school.latitude:.4f}, {school.longitude:.4f}): "
+                f"Teacher absence anomaly with high student-teacher ratio ({teacher_ratio:.0f}:1)."
+            )
     else:
-        atype = rng.choice([AnomalyType.meal_fraud, AnomalyType.outcome_manipulation])
         severity = AnomalySeverity.medium
-        funds = rng.uniform(50_000, 200_000)
-        description = (
-            f"Minor discrepancy at {school.name}: "
-            f"{atype.value.replace('_', ' ')} flagged for review."
-        )
+        if capacity_ratio > 1.10:
+            atype = AnomalyType.enrollment_inflation
+            excess = max(0, school.reported_enrollment - estimated_capacity)
+            funds = excess * 220 * 8.17
+            description = (
+                f"Minor discrepancy at {school.name} ({school.latitude:.4f}, {school.longitude:.4f}): "
+                f"Enrollment inflation flagged for review."
+            )
+        elif meals_ratio > 1.10:
+            atype = AnomalyType.meal_fraud
+            excess = max(0, school.reported_meals_daily - school.reported_enrollment)
+            funds = excess * 220 * 8.17
+            description = (
+                f"Minor discrepancy at {school.name} ({school.latitude:.4f}, {school.longitude:.4f}): "
+                f"Meal fraud flagged for review."
+            )
+        else:
+            atype = AnomalyType.teacher_absence
+            funds = 0.0
+            description = (
+                f"Minor discrepancy at {school.name} ({school.latitude:.4f}, {school.longitude:.4f}): "
+                f"Teacher absence flagged for review."
+            )
 
     detected_days_ago = rng.randint(1, 90)
     detected_at = datetime.utcnow() - timedelta(days=detected_days_ago)
@@ -315,22 +431,8 @@ def _make_anomaly(school: School, category: str) -> Anomaly:
         status = AnomalyStatus.resolved
 
     lat, lng = school.latitude, school.longitude
-    sat_before = None
-    sat_after = None
-    if category == "red":
-        from app.services.satellite import _init_ee, get_before_after_images
-        if _init_ee():
-            try:
-                before_img, after_img = get_before_after_images(lat, lng, detected_at)
-                sat_before = before_img.get("image_url")
-                sat_after = after_img.get("image_url")
-            except Exception as e:
-                logger.warning(f"GEE before/after image fetch failed for {school.udise_code}: {e}")
-        
-        if not sat_before:
-            sat_before = _demo_satellite_url(lat, lng, "before")
-        if not sat_after:
-            sat_after = _demo_satellite_url(lat, lng, "after")
+    sat_before = _demo_satellite_url(lat, lng, "before")
+    sat_after = _demo_satellite_url(lat, lng, "after")
 
     return Anomaly(
         udise_code=school.udise_code,
@@ -384,10 +486,10 @@ def _make_pulse_event(anomaly: Anomaly, school: School) -> PulseEvent:
     return PulseEvent(
         anomaly_id=anomaly.id,
         event_type=anomaly.anomaly_type.value,
-        headline=f"{label} detected at {school.name}",
+        headline=f"{label} detected at {school.name} ({school.latitude:.4f}, {school.longitude:.4f})",
         summary=anomaly.description[:250],
         funds_mentioned_inr=anomaly.funds_at_risk_inr,
-        school_name=school.name,
+        school_name=f"{school.name} ({school.latitude:.4f}, {school.longitude:.4f})",
         district_name=DISTRICT_NAME,
         state_name=STATE_NAME,
         satellite_url=anomaly.satellite_before_url,
@@ -544,6 +646,18 @@ def run_seed():
     db = SessionLocal()
 
     try:
+        # Clear existing tables to ensure a clean slate
+        logger.info("Clearing existing data...")
+        db.query(Notice).delete()
+        db.query(PulseEvent).delete()
+        db.query(SatelliteCapture).delete()
+        db.query(Anomaly).delete()
+        db.query(Verification).delete()
+        db.query(School).delete()
+        db.query(Officer).delete()
+        db.query(District).delete()
+        db.commit()
+
         # ── Step 1: Sitapur district ──────────────────────────────────────
         sitapur = db.query(District).filter(District.district_code == DISTRICT_CODE).first()
         if not sitapur:

@@ -20,13 +20,13 @@ def main():
         print("Initialization failed! Cannot test get_sentinel2_image.")
         return
 
-    print("Calling get_sentinel2_image at coordinates (27.57, 80.68) for Jan 2024...")
+    print("Calling get_sentinel2_image at coordinates (27.57, 80.68) for Jan 2025...")
     try:
         res = get_sentinel2_image(
-            lat=27.57,
-            lng=80.68,
-            date_start="2024-01-01",
-            date_end="2024-01-31"
+            lat=29.0358579,
+            lng=77.6679013,
+            date_start="2025-01-01",
+            date_end="2025-01-31"
         )
         print("Call completed successfully!")
         print(f"Image URL: {res.get('image_url')}")

@@ -52,8 +52,8 @@ def run(school_row: Dict[str, Any], mdm_data: Optional[Dict] = None) -> Dict[str
 
     satellite_url = export_thumbnail(lat, lng)
 
-    # Ghost school: reported active, no building detected
-    if not building_exists and reported_building:
+    # Ghost school: reported active, no building detected or critically small building (<20 sqm)
+    if reported_building and (not building_exists or footprint < 20):
         funds_at_risk = _estimate_funds_at_risk(
             reported_teachers, reported_enrollment, reported_meals, mdm_data
         )
@@ -62,13 +62,14 @@ def run(school_row: Dict[str, Any], mdm_data: Optional[Dict] = None) -> Dict[str
             "module_name": MODULE_NAME,
             "status": "ghost",
             "confidence": confidence,
+            "footprint_sqm": footprint,
             "reported_value": f"Building exists, {reported_enrollment} students enrolled",
-            "verified_value": f"No building detected within 100m (footprint: {footprint:.0f} sqm)",
+            "verified_value": f"No building detected or footprint critically small ({footprint:.0f} sqm) within 100m",
             "discrepancy_amount_inr": funds_at_risk,
             "satellite_image_url": satellite_url,
             "evidence_url": satellite_url,
             "summary": (
-                f"Satellite imagery shows no building at reported coordinates. "
+                f"Satellite imagery shows no building or critically small footprint ({footprint:.0f} sqm) at reported coordinates. "
                 f"School claims {reported_enrollment} students and {reported_teachers} teachers. "
                 f"Estimated ₹{funds_at_risk/100_000:.1f}L in annual public funds at risk."
             ),
@@ -81,6 +82,7 @@ def run(school_row: Dict[str, Any], mdm_data: Optional[Dict] = None) -> Dict[str
             "module_name": MODULE_NAME,
             "status": "verified",
             "confidence": confidence,
+            "footprint_sqm": footprint,
             "reported_value": "No building reported",
             "verified_value": "No building detected — consistent with report",
             "discrepancy_amount_inr": None,
@@ -95,6 +97,7 @@ def run(school_row: Dict[str, Any], mdm_data: Optional[Dict] = None) -> Dict[str
         "module_name": MODULE_NAME,
         "status": "verified",
         "confidence": confidence,
+        "footprint_sqm": footprint,
         "reported_value": f"Building exists, {reported_enrollment} students",
         "verified_value": f"Building detected ({footprint:.0f} sqm footprint)",
         "discrepancy_amount_inr": None,

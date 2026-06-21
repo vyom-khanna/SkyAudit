@@ -298,16 +298,41 @@ def _compute_accountability_score(module_results: List[Dict]) -> float:
 
 
 def _classify_severity(module_results: List[Dict]) -> AnomalySeverity:
-    ghost = any(r.get("status") == "ghost" for r in module_results)
-    anomaly_count = sum(1 for r in module_results if r.get("status") == "anomaly")
-    max_confidence = max((r.get("confidence", 0) for r in module_results), default=0)
-
-    if ghost or (anomaly_count >= 3 and max_confidence > 0.8):
+    m1_result = next((r for r in module_results if r.get("module_id") == 1), None)
+    if m1_result and m1_result.get("status") == "ghost":
         return AnomalySeverity.critical
-    if anomaly_count >= 2 or max_confidence > 0.75:
+
+    m3_result = next((r for r in module_results if r.get("module_id") == 3), None)
+    m4_result = next((r for r in module_results if r.get("module_id") == 4), None)
+    m6_result = next((r for r in module_results if r.get("module_id") == 6), None)
+
+    is_orange = False
+    if m3_result and m3_result.get("inflation_ratio", 0.0) > 1.50:
+        is_orange = True
+    if m6_result and m6_result.get("risk_score", 0.0) > 0.50:
+        is_orange = True
+    if m4_result and m4_result.get("meals_ratio", 0.0) > 1.30:
+        is_orange = True
+
+    if is_orange:
         return AnomalySeverity.high
-    if anomaly_count == 1 and max_confidence > 0.5:
+
+    is_yellow = False
+    if m3_result and 1.10 <= m3_result.get("inflation_ratio", 0.0) <= 1.50:
+        is_yellow = True
+    if m6_result and 0.30 <= m6_result.get("risk_score", 0.0) <= 0.50:
+        is_yellow = True
+    if m4_result and 1.10 <= m4_result.get("meals_ratio", 0.0) <= 1.30:
+        is_yellow = True
+
+    if not is_yellow:
+        any_anomaly = any(r.get("status") in ("anomaly", "ghost") for r in module_results)
+        if any_anomaly:
+            is_yellow = True
+
+    if is_yellow:
         return AnomalySeverity.medium
+
     return AnomalySeverity.low
 
 
@@ -358,7 +383,7 @@ def _create_anomalies(
     if not anomalous:
         return created
 
-    severity = _classify_severity(anomalous)
+    severity = _classify_severity(module_results)
 
     for result in anomalous:
         anomaly = Anomaly(
@@ -403,10 +428,10 @@ def _emit_pulse_event(
     event = PulseEvent(
         anomaly_id=anomaly.id,
         event_type=anomaly.anomaly_type.value,
-        headline=f"{label} detected at {school.name}",
+        headline=f"{label} detected at {school.name} ({school.latitude:.4f}, {school.longitude:.4f})",
         summary=anomaly.description[:300] if anomaly.description else "",
         funds_mentioned_inr=anomaly.funds_at_risk_inr,
-        school_name=school.name,
+        school_name=f"{school.name} ({school.latitude:.4f}, {school.longitude:.4f})",
         district_name=district.district_name if district else school.district_code,
         state_name=district.state_name if district else "",
         satellite_url=anomaly.satellite_before_url,
